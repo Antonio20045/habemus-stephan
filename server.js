@@ -34,7 +34,7 @@ app.delete("/api/entries/:id", async (q, res) => {
 
 // Leaderboard for the "Manege-Run" mini game.
 app.get("/api/scores", async (_q, res) => {
-  try { const r = await pool.query(`SELECT name, score FROM ${SCORES} ORDER BY score DESC, id ASC LIMIT 15`); res.json({ scores: r.rows }); }
+  try { const r = await pool.query(`SELECT id, name, score FROM ${SCORES} ORDER BY score DESC, id ASC LIMIT 15`); res.json({ scores: r.rows }); }
   catch (e) { res.status(500).json({ error: "db" }); }
 });
 app.post("/api/scores", async (q, res) => {
@@ -44,7 +44,17 @@ app.post("/api/scores", async (q, res) => {
     if (!name || !Number.isFinite(score)) return res.status(400).json({ error: "missing" });
     score = Math.max(0, Math.min(score, 1000000));
     await pool.query(`INSERT INTO ${SCORES} (name, score) VALUES ($1, $2)`, [name, score]);
-    const r = await pool.query(`SELECT name, score FROM ${SCORES} ORDER BY score DESC, id ASC LIMIT 15`);
+    const r = await pool.query(`SELECT id, name, score FROM ${SCORES} ORDER BY score DESC, id ASC LIMIT 15`);
+    res.json({ scores: r.rows });
+  } catch (e) { res.status(500).json({ error: "db" }); }
+});
+// Optional moderation: delete one score (id) or all (id="all"). Needs x-admin-token = ADMIN_TOKEN.
+app.delete("/api/scores/:id", async (q, res) => {
+  try {
+    if (!process.env.ADMIN_TOKEN || q.headers["x-admin-token"] !== process.env.ADMIN_TOKEN) return res.status(403).json({ error: "forbidden" });
+    if (q.params.id === "all") await pool.query(`DELETE FROM ${SCORES}`);
+    else await pool.query(`DELETE FROM ${SCORES} WHERE id = $1`, [q.params.id]);
+    const r = await pool.query(`SELECT id, name, score FROM ${SCORES} ORDER BY score DESC, id ASC LIMIT 15`);
     res.json({ scores: r.rows });
   } catch (e) { res.status(500).json({ error: "db" }); }
 });
