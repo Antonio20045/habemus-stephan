@@ -222,15 +222,15 @@ section{padding:60px 0}
 </div></section>
 <div class="divider"></div>
 <section><div class="wrap">
-<div class="h2">Der <span class="accent">Rheinkirmes-Run</span></div>
-<p class="sub">Stefan rast über die Düsseldorfer Rheinkirmes: Tickets 🎟️ sammeln, über die Android-Partner 🤖 springen — vorbei an Achterbahn und Riesenrad, immer schneller. Leertaste, ↑ oder Tippen zum Springen (Doppelsprung geht auch).</p>
+<div class="h2">Der <span class="accent">Achterbahn-Ritt</span></div>
+<p class="sub">Echte Achterbahn-Physik auf der Düsseldorfer Rheinkirmes: Halte gedrückt, um abzutauchen und Schwung zu holen — flieg über die Kuppen für maximale Airtime und sammle Sterne ⭐. Hol so viele Punkte wie möglich, bevor die Zeit abläuft! (Leertaste oder Tippen gedrückt halten)</p>
 <div class="gamewrap">
   <div class="game" id="game">
     <div class="hud" id="hud">0 Punkte</div>
     <canvas id="cv" width="860" height="300"></canvas>
     <div class="overlay" id="ov">
-      <h3>Der Rheinkirmes-Run</h3>
-      <p>Willkommen auf der Düsseldorfer Rheinkirmes! Sammle Tickets 🎟️ und spring über die Android-Partner 🤖 — die Achterbahn rauscht im Hintergrund. Wer stolpert, beendet die Fahrt.</p>
+      <h3>Der Achterbahn-Ritt</h3>
+      <p>Steig in die Achterbahn! Halte gedrückt zum Abtauchen — je steiler du ins Tal tauchst, desto mehr Schwung und Airtime über der nächsten Kuppe. Sammle Sterne ⭐ und fahr auf Highscore, bevor die Zeit endet.</p>
       <div class="row"><button class="btn" id="startbtn">Los geht's</button></div>
     </div>
   </div>
@@ -366,17 +366,19 @@ load();
   var cv=document.getElementById('cv'); if(!cv) return;
   var ctx=cv.getContext('2d'), W=cv.width, H=cv.height, groundY=H-42;
   var hud=document.getElementById('hud'), ov=document.getElementById('ov'), boardEl=document.getElementById('board');
-  var state='idle', last=0, speed=270, elapsed=0, dist=0, scoreF=0, score=0, lastName='';
-  var player, obstacles, tickets, spawnO, spawnT;
-  function reset(){ player={x:84,y:groundY,vy:0,jumps:2,w:30,h:40}; obstacles=[]; tickets=[]; spawnO=0.7; spawnT=0.6; speed=270; elapsed=0; dist=0; scoreF=0; score=0; }
-  function jump(){ if(state==='run' && player.jumps>0){ player.vy=-680; player.jumps--; } }
+  var state='idle', last=0, lastName='', diving=false;
+  var carX, carY, vx, vy, airborne, air, elapsed, timeLeft, score, collected, bestAir;
+  var CARSX=150, G=1500, GD=3000, MINV0=250, MAXV=820, GAME=42, STARGAP=140;
+  function terrain(x){ return H*0.56 + Math.sin(x*0.011)*54 + Math.sin(x*0.022+1.3)*26 + Math.sin(x*0.041+0.7)*12; }
+  function slope(x){ return (terrain(x+4)-terrain(x-4))/8; }
+  function reset(){ carX=0; carY=terrain(0); vx=320; vy=0; airborne=false; air=0; elapsed=0; timeLeft=GAME; score=0; collected={}; bestAir=0; diving=false; }
   function start(){ if(state==='run')return; reset(); state='run'; ov.classList.add('hide'); last=performance.now(); requestAnimationFrame(loop); }
-  function idleOverlay(txt){ state='idle'; ov.classList.remove('hide'); ov.innerHTML='<h3>Der Rheinkirmes-Run</h3><p>'+txt+'</p><div class="row"><button class="btn" id="startbtn">Los geht’s</button></div>'; document.getElementById('startbtn').onclick=start; }
+  function idleOverlay(txt){ state='idle'; ov.classList.remove('hide'); ov.innerHTML='<h3>Der Achterbahn-Ritt</h3><p>'+txt+'</p><div class="row"><button class="btn" id="startbtn">Los geht’s</button></div>'; document.getElementById('startbtn').onclick=start; }
   function gameOver(){
     state='over';
     ov.classList.remove('hide');
-    ov.innerHTML='<h3>Fahrt beendet! 🎢</h3><div class="big">'+score+' Punkte</div>'
-      +'<p>Trag dich in die Bestenliste der Abteilung ein.</p>'
+    ov.innerHTML='<h3>Zeit um! 🎢</h3><div class="big">'+score+' Punkte</div>'
+      +'<p>Beste Airtime: '+bestAir.toFixed(2)+' s. Trag dich in die Bestenliste ein.</p>'
       +'<input id="gname" maxlength="40" placeholder="Dein Name" value="'+esc(lastName)+'">'
       +'<div class="row"><button class="btn" id="save">Eintragen</button><button class="btn-ghost" id="again">Nochmal</button></div>';
     document.getElementById('again').onclick=start;
@@ -384,74 +386,55 @@ load();
       var nm=document.getElementById('gname').value.trim(); if(!nm){document.getElementById('gname').focus();return;}
       lastName=nm; var b=this; b.disabled=true; b.textContent='Wird gesendet ...';
       fetch('/api/scores',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nm,score:score})})
-        .then(function(r){return r.json();}).then(function(d){ renderBoard(d.scores,nm,score); if(typeof confetti==='function') confetti(); idleOverlay('Eingetragen! 🎉 Noch eine Fahrt über die Rheinkirmes?'); })
+        .then(function(r){return r.json();}).then(function(d){ renderBoard(d.scores,nm,score); if(typeof confetti==='function') confetti(); idleOverlay('Eingetragen! 🎉 Noch eine Runde Achterbahn?'); })
         .catch(function(){ b.disabled=false; b.textContent='Eintragen'; alert('Konnte nicht gespeichert werden.'); });
     };
     var gn=document.getElementById('gname'); if(gn) gn.focus();
   }
   function loop(t){
     if(state!=='run') return;
-    var dt=Math.min(0.05,(t-last)/1000); last=t; elapsed+=dt; speed=Math.min(640,270+elapsed*15); dist+=speed*dt;
-    player.vy+=2100*dt; player.y+=player.vy*dt;
-    if(player.y>=groundY){player.y=groundY;player.vy=0;player.jumps=2;}
-    spawnO-=dt; if(spawnO<=0){ obstacles.push({x:W+24,w:30,h:30+Math.floor(Math.random()*12)}); spawnO=Math.max(0.6,(0.85+Math.random()*0.7)*(300/speed)); }
-    spawnT-=dt; if(spawnT<=0){ tickets.push({x:W+24,y:groundY-(58+Math.random()*95),r:15,got:false}); spawnT=0.8+Math.random()*1.2; }
-    var i;
-    for(i=obstacles.length-1;i>=0;i--){obstacles[i].x-=speed*dt; if(obstacles[i].x<-44)obstacles.splice(i,1);}
-    for(i=tickets.length-1;i>=0;i--){tickets[i].x-=speed*dt; if(tickets[i].x<-44)tickets.splice(i,1);}
-    scoreF+=dt*24; score=Math.floor(scoreF);
-    var pL=player.x-player.w/2+4, pR=player.x+player.w/2-4, pT=player.y-player.h+6, pB=player.y-2;
-    for(i=0;i<obstacles.length;i++){var o=obstacles[i], oL=o.x-o.w/2+5, oR=o.x+o.w/2-5, oT=groundY-o.h+5; if(pR>oL&&pL<oR&&pB>oT){ return gameOver(); }}
-    for(i=0;i<tickets.length;i++){var tk=tickets[i]; if(tk.got)continue; if(Math.abs(tk.x-player.x)<26 && Math.abs(tk.y-(player.y-player.h/2))<30){tk.got=true; scoreF+=10;}}
-    tickets=tickets.filter(function(x){return !x.got;});
-    draw(); hud.textContent=score+' Punkte'; requestAnimationFrame(loop);
+    var dt=Math.min(0.04,(t-last)/1000); last=t; elapsed+=dt; timeLeft-=dt;
+    var minv=Math.min(470,MINV0+elapsed*5), g=diving?GD:G;
+    carX+=vx*dt; vy+=g*dt; if(vy<-820)vy=-820; carY+=vy*dt; if(carY<-8){carY=-8; if(vy<0)vy=0;}
+    var gh=terrain(carX);
+    if(carY>=gh){
+      if(airborne){ if(air>bestAir)bestAir=air; if(air>0.22) score+=Math.round(air*air*210); air=0; }
+      airborne=false; carY=gh;
+      var s=slope(carX), L=Math.sqrt(1+s*s), tx=1/L, ty=s/L, dot=vx*tx+vy*ty; if(dot<0)dot=0;
+      vx=dot*tx; vy=dot*ty;
+      if(vx<minv){vx=minv; vy=vx*s;} if(vx>MAXV){vx=MAXV; vy=vx*s;}
+    } else { airborne=true; air+=dt; }
+    score+=vx*dt*0.03;
+    var near=Math.round(carX/STARGAP);
+    for(var ds=-1;ds<=1;ds++){ var sl=near+ds; if(collected[sl])continue; var sxw=sl*STARGAP, sy=terrain(sxw)-55; if(Math.abs(carX-sxw)<26 && Math.abs(carY-sy)<40){ collected[sl]=true; score+=30; } }
+    if(timeLeft<=0){ score=Math.round(score); return gameOver(); }
+    draw(); hud.textContent=Math.round(score)+' · ⏱ '+Math.ceil(timeLeft)+'s'; requestAnimationFrame(loop);
   }
-  function tent(x,w){
-    var h=w*0.72, cx=x+w/2;
-    ctx.fillStyle='#ffe3e3'; ctx.beginPath(); ctx.moveTo(x,groundY); ctx.lineTo(cx,groundY-h); ctx.lineTo(x+w,groundY); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(230,0,0,.55)';
-    for(var s=0;s<5;s++){ var xa=x+(w/5)*s, xb=x+(w/5)*(s+0.5); ctx.beginPath(); ctx.moveTo(xa,groundY); ctx.lineTo(cx,groundY-h); ctx.lineTo(xb,groundY); ctx.closePath(); ctx.fill(); }
-    ctx.strokeStyle='#c9962f'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,groundY-h); ctx.lineTo(cx,groundY-h-14); ctx.stroke();
-    ctx.fillStyle='#f5b301'; ctx.beginPath(); ctx.moveTo(cx,groundY-h-14); ctx.lineTo(cx+12,groundY-h-10.5); ctx.lineTo(cx,groundY-h-7); ctx.closePath(); ctx.fill();
-  }
-  function coaster(x0,base){
-    ctx.save(); ctx.strokeStyle='rgba(230,0,0,.4)'; ctx.lineWidth=4; ctx.lineJoin='round'; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(x0,base); ctx.lineTo(x0+26,base-74);
-    ctx.quadraticCurveTo(x0+60,base-98,x0+92,base-42);
-    ctx.quadraticCurveTo(x0+120,base-8,x0+150,base-42);
-    ctx.quadraticCurveTo(x0+186,base-96,x0+222,base-42);
-    ctx.quadraticCurveTo(x0+252,base-6,x0+282,base); ctx.stroke();
-    ctx.beginPath(); ctx.arc(x0+150,base-66,24,0,7); ctx.stroke();
-    ctx.strokeStyle='rgba(37,40,43,.2)'; ctx.lineWidth=2;
-    for(var sx=x0+12;sx<x0+282;sx+=32){ ctx.beginPath(); ctx.moveTo(sx,base); ctx.lineTo(sx,groundY); ctx.stroke(); }
-    ctx.restore();
-  }
-  function ferris(cx,cy,r,rot){
-    ctx.save();
-    ctx.strokeStyle='rgba(37,40,43,.28)'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx-r*0.55,groundY); ctx.lineTo(cx,cy); ctx.lineTo(cx+r*0.55,groundY); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.stroke();
-    ctx.lineWidth=2;
-    for(var k=0;k<8;k++){ var a=rot+k*Math.PI/4, x2=cx+Math.cos(a)*r, y2=cy+Math.sin(a)*r; ctx.strokeStyle='rgba(37,40,43,.28)'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x2,y2); ctx.stroke(); ctx.fillStyle=(k%2)?'#e60000':'#f5b301'; ctx.beginPath(); ctx.arc(x2,y2,5,0,7); ctx.fill(); }
-    ctx.fillStyle='#c9962f'; ctx.beginPath(); ctx.arc(cx,cy,4,0,7); ctx.fill();
-    ctx.restore();
-  }
+  function tent(x,w,gY){ var h=w*0.7, cx=x+w/2; ctx.fillStyle='#ffe0e0'; ctx.beginPath(); ctx.moveTo(x,gY); ctx.lineTo(cx,gY-h); ctx.lineTo(x+w,gY); ctx.closePath(); ctx.fill(); ctx.fillStyle='rgba(230,0,0,.38)'; for(var s=0;s<5;s++){ var xa=x+(w/5)*s, xb=x+(w/5)*(s+0.5); ctx.beginPath(); ctx.moveTo(xa,gY); ctx.lineTo(cx,gY-h); ctx.lineTo(xb,gY); ctx.closePath(); ctx.fill(); } }
+  function ferris(cx,cy,r,rot,gY){ ctx.save(); ctx.strokeStyle='rgba(37,40,43,.2)'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx-r*0.55,gY); ctx.lineTo(cx,cy); ctx.lineTo(cx+r*0.55,gY); ctx.stroke(); ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.stroke(); ctx.lineWidth=2; for(var k=0;k<8;k++){ var a=rot+k*Math.PI/4,x2=cx+Math.cos(a)*r,y2=cy+Math.sin(a)*r; ctx.strokeStyle='rgba(37,40,43,.2)'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x2,y2); ctx.stroke(); ctx.fillStyle=(k%2)?'#e60000':'#f5b301'; ctx.beginPath(); ctx.arc(x2,y2,4,0,7); ctx.fill(); } ctx.restore(); }
   function txt(s,x,y,px){ ctx.font=px+'px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillText(s,x,y); }
   function draw(){
-    var g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#fff3d6'); g.addColorStop(0.6,'#ffd9c2'); g.addColorStop(1,'#ffbfbf'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='rgba(245,179,1,.28)'; ctx.beginPath(); ctx.arc(W-90,60,46,0,7); ctx.fill();
-    ctx.fillStyle='rgba(245,179,1,.9)'; ctx.beginPath(); ctx.arc(W-90,60,30,0,7); ctx.fill();
-    var coff=(dist*0.5)%340; for(var cx0=-340;cx0<W+340;cx0+=340){ coaster(cx0-coff,groundY-8); }
-    var P=W+260, fx=P-((dist*0.5)%P)-130; ferris(fx,groundY-104,46,elapsed*0.5);
-    var toff=(dist*0.35)%200; for(var x=-200;x<W+200;x+=200){ tent(x-toff,140); }
-    ctx.strokeStyle='rgba(37,40,43,.35)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,28); ctx.quadraticCurveTo(W/2,64,W,28); ctx.stroke();
-    var cols=['#e60000','#f5b301','#ffffff']; for(var b=0;b<12;b++){ var bx=(b+0.5)*(W/12), by=28+Math.sin(b/11*Math.PI)*34+6; ctx.fillStyle=cols[b%3]; ctx.beginPath(); ctx.arc(bx,by,4,0,7); ctx.fill(); }
-    ctx.fillStyle='#e26a6a'; ctx.fillRect(0,groundY,W,H-groundY);
-    ctx.fillStyle='#c0392b'; ctx.fillRect(0,groundY,W,5);
-    ctx.fillStyle='rgba(255,255,255,.75)'; var doff=dist%46; for(var d=-46;d<W;d+=46){ ctx.fillRect(d-doff,groundY+16,22,5); }
-    for(var m=0;m<tickets.length;m++){ txt('🎟️',tickets[m].x,tickets[m].y+10,30); }
-    for(var k=0;k<obstacles.length;k++){ txt('🤖',obstacles[k].x,groundY+4,obstacles[k].h+10); }
-    var bob=(player.y>=groundY)?Math.sin(dist*0.05)*1.5:0;
-    txt('🤵',player.x,player.y+6+bob,44);
+    var off=carX-CARSX;
+    var g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#fff3d6'); g.addColorStop(0.55,'#ffdcc2'); g.addColorStop(1,'#ffc6c6'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(245,179,1,.9)'; ctx.beginPath(); ctx.arc(W-84,56,28,0,7); ctx.fill();
+    var bg=off*0.35, bgY=H*0.52, PP=W+260;
+    var fx=(PP-(((bg%PP)+PP)%PP))-130; ferris(fx,bgY-8,42,elapsed*0.5,bgY+64);
+    var toff=((bg%180)+180)%180; for(var x=-180;x<W+180;x+=180){ tent(x-toff,120,bgY+66); }
+    ctx.strokeStyle='rgba(37,40,43,.28)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,22); ctx.quadraticCurveTo(W/2,52,W,22); ctx.stroke();
+    var cols=['#e60000','#f5b301','#ffffff']; for(var b=0;b<11;b++){ var lx=(b+0.5)*(W/11), ly=22+Math.sin(b/10*Math.PI)*30+5; ctx.fillStyle=cols[b%3]; ctx.beginPath(); ctx.arc(lx,ly,3.5,0,7); ctx.fill(); }
+    ctx.beginPath(); ctx.moveTo(0,H); for(var sx=0;sx<=W;sx+=6){ ctx.lineTo(sx, terrain(off+sx)); } ctx.lineTo(W,H); ctx.closePath(); ctx.fillStyle='#e0785f'; ctx.fill();
+    ctx.beginPath(); for(var sx2=0;sx2<=W;sx2+=6){ var yy=terrain(off+sx2); if(sx2===0)ctx.moveTo(sx2,yy); else ctx.lineTo(sx2,yy); } ctx.strokeStyle='#b02a1a'; ctx.lineWidth=4; ctx.lineJoin='round'; ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=3;
+    for(var tx=-(((off%20)+20)%20); tx<=W; tx+=20){ var wx=off+tx, ty=terrain(wx), a=Math.atan(slope(wx)); ctx.beginPath(); ctx.moveTo(tx+Math.sin(a)*6, ty-Math.cos(a)*6); ctx.lineTo(tx-Math.sin(a)*6, ty+Math.cos(a)*6); ctx.stroke(); }
+    for(var slot=Math.floor((off-40)/STARGAP); slot*STARGAP<off+W+40; slot++){ if(collected[slot])continue; var sxw=slot*STARGAP, sy=terrain(sxw)-55, scr=sxw-off; if(scr<-30||scr>W+30)continue; txt('⭐',scr,sy+8,22); }
+    var ang=airborne?Math.max(-0.7,Math.min(0.7,Math.atan2(vy,vx))):Math.atan(slope(carX));
+    ctx.save(); ctx.translate(CARSX,carY); ctx.rotate(ang);
+    ctx.fillStyle='#e60000'; ctx.beginPath(); ctx.moveTo(-22,-1); ctx.lineTo(-19,-15); ctx.lineTo(15,-15); ctx.lineTo(22,-1); ctx.lineTo(22,5); ctx.lineTo(-22,5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#ffd54a'; ctx.fillRect(-15,-10,7,6);
+    ctx.fillStyle='#25282b'; ctx.beginPath(); ctx.arc(-12,7,5,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(12,7,5,0,7); ctx.fill();
+    ctx.restore();
+    txt('🤵',CARSX-1,carY-14,26);
+    if(airborne && air>0.32){ ctx.fillStyle='#e60000'; ctx.font='800 15px Inter,Arial,sans-serif'; ctx.textAlign='center'; ctx.fillText('AIRTIME!',CARSX,carY-38); }
   }
   function renderBoard(list,meName,meScore){
     if(!list||!list.length){ boardEl.innerHTML='<li class="empty">Noch keine Einträge — leg vor!</li>'; return; }
@@ -459,9 +442,11 @@ load();
     boardEl.innerHTML=list.map(function(s){ var mine=(!used&&meName!=null&&s.name===meName&&s.score===meScore); if(mine)used=true; return '<li'+(mine?' class="me"':'')+'><span class="nm">'+esc(s.name)+'</span><span class="sc">'+s.score+'</span></li>'; }).join('');
   }
   function loadScores(){ fetch('/api/scores?cb='+Date.now()).then(function(r){return r.json();}).then(function(d){renderBoard(d.scores);}).catch(function(){}); }
-  function onKey(e){ var tg=(e.target&&e.target.tagName||'').toLowerCase(); if(tg==='input'||tg==='textarea') return; if(e.code==='Space'||e.key===' '||e.key==='ArrowUp'||e.code==='ArrowUp'){ if(state==='run'){e.preventDefault();jump();} else if(state==='idle'){e.preventDefault();start();} } }
-  addEventListener('keydown',onKey);
-  cv.addEventListener('pointerdown',function(e){ e.preventDefault(); if(state==='run')jump(); else if(state==='idle')start(); });
+  function onKey(e){ var tg=(e.target&&e.target.tagName||'').toLowerCase(); if(tg==='input'||tg==='textarea') return; if(e.code==='Space'||e.key===' '||e.key==='ArrowDown'||e.key==='ArrowUp'){ if(state==='idle'){e.preventDefault();start();} else if(state==='run'){e.preventDefault();diving=true;} } }
+  function onKeyUp(e){ if(e.code==='Space'||e.key===' '||e.key==='ArrowDown'||e.key==='ArrowUp'){ diving=false; } }
+  addEventListener('keydown',onKey); addEventListener('keyup',onKeyUp);
+  cv.addEventListener('pointerdown',function(e){ e.preventDefault(); if(state==='idle')start(); else diving=true; });
+  addEventListener('pointerup',function(){ diving=false; }); cv.addEventListener('pointercancel',function(){ diving=false; });
   var sb=document.getElementById('startbtn'); if(sb) sb.onclick=start;
   reset(); draw(); loadScores();
 })();
