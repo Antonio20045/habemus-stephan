@@ -118,12 +118,18 @@ section{padding:60px 0}
 .board li.me{background:rgba(245,179,1,.16);border-radius:8px}
 .board li.empty{color:var(--vf-mute);justify-content:center}
 .board li.empty::before{content:none;width:0}
-@media(prefers-reduced-motion:reduce){.seal,.seal .burst,.candle .flame{animation:none}.gwish{animation:none;opacity:1;transform:none!important}}
+.musicbtn{position:fixed;right:22px;bottom:22px;width:56px;height:56px;border-radius:50%;border:0;background:var(--vf-gold-deep);color:#fff;font-size:24px;cursor:pointer;z-index:70;box-shadow:0 10px 26px rgba(230,0,0,.42);display:flex;align-items:center;justify-content:center;line-height:1;transition:transform .15s,background .2s}
+.musicbtn:hover{transform:scale(1.06)}.musicbtn:active{transform:scale(.94)}
+.musicbtn:not(.on){background:#9aa0a6;box-shadow:0 10px 26px rgba(0,0,0,.2)}
+@keyframes mpulse{0%,100%{box-shadow:0 10px 26px rgba(230,0,0,.42)}50%{box-shadow:0 10px 26px rgba(230,0,0,.42),0 0 0 9px rgba(245,179,1,.16)}}
+.musicbtn.on{animation:mpulse 1.8s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.seal,.seal .burst,.candle .flame,.musicbtn.on{animation:none}.gwish{animation:none;opacity:1;transform:none!important}}
 </style>
 </head>
 <body>
 <div class="topbar" id="topbar"></div>
 <canvas id="confetti"></canvas>
+<button class="musicbtn on" id="music" aria-label="Geburtstagsmusik an/aus" title="Geburtstagsmusik an/aus">🎵</button>
 <header class="hero"><div class="wrap">
 <h1>Geburtstag <span class="accent">Stefan</span></h1>
 <p class="lede">Die ganze Abteilung nimmt Platz in der Manege: Unser Entertainment Manager wird heute <b>60</b>. Manegenlicht an, Achterbahn angeworfen — und sogar die Android-Partner tanzen nach seinem Takt.</p>
@@ -216,15 +222,15 @@ section{padding:60px 0}
 </div></section>
 <div class="divider"></div>
 <section><div class="wrap">
-<div class="h2">Der <span class="accent">Manege-Run</span></div>
-<p class="sub">Zirkusdirektor Stefan sammelt Tickets 🎟️ und springt über die Android-Partner 🤖 — es wird immer schneller. Leertaste, ↑ oder Tippen zum Springen (Doppelsprung geht auch).</p>
+<div class="h2">Der <span class="accent">Rheinkirmes-Run</span></div>
+<p class="sub">Stefan rast über die Düsseldorfer Rheinkirmes: Tickets 🎟️ sammeln, über die Android-Partner 🤖 springen — vorbei an Achterbahn und Riesenrad, immer schneller. Leertaste, ↑ oder Tippen zum Springen (Doppelsprung geht auch).</p>
 <div class="gamewrap">
   <div class="game" id="game">
     <div class="hud" id="hud">0 Punkte</div>
     <canvas id="cv" width="860" height="300"></canvas>
     <div class="overlay" id="ov">
-      <h3>Der Manege-Run</h3>
-      <p>Sammle Tickets 🎟️ und spring über die Android-Partner 🤖. Wer in der Manege stolpert, beendet die Vorstellung.</p>
+      <h3>Der Rheinkirmes-Run</h3>
+      <p>Willkommen auf der Düsseldorfer Rheinkirmes! Sammle Tickets 🎟️ und spring über die Android-Partner 🤖 — die Achterbahn rauscht im Hintergrund. Wer stolpert, beendet die Fahrt.</p>
       <div class="row"><button class="btn" id="startbtn">Los geht's</button></div>
     </div>
   </div>
@@ -365,11 +371,11 @@ load();
   function reset(){ player={x:84,y:groundY,vy:0,jumps:2,w:30,h:40}; obstacles=[]; tickets=[]; spawnO=0.7; spawnT=0.6; speed=270; elapsed=0; dist=0; scoreF=0; score=0; }
   function jump(){ if(state==='run' && player.jumps>0){ player.vy=-680; player.jumps--; } }
   function start(){ if(state==='run')return; reset(); state='run'; ov.classList.add('hide'); last=performance.now(); requestAnimationFrame(loop); }
-  function idleOverlay(txt){ state='idle'; ov.classList.remove('hide'); ov.innerHTML='<h3>Der Manege-Run</h3><p>'+txt+'</p><div class="row"><button class="btn" id="startbtn">Los geht’s</button></div>'; document.getElementById('startbtn').onclick=start; }
+  function idleOverlay(txt){ state='idle'; ov.classList.remove('hide'); ov.innerHTML='<h3>Der Rheinkirmes-Run</h3><p>'+txt+'</p><div class="row"><button class="btn" id="startbtn">Los geht’s</button></div>'; document.getElementById('startbtn').onclick=start; }
   function gameOver(){
     state='over';
     ov.classList.remove('hide');
-    ov.innerHTML='<h3>Vorstellung beendet! 🎪</h3><div class="big">'+score+' Punkte</div>'
+    ov.innerHTML='<h3>Fahrt beendet! 🎢</h3><div class="big">'+score+' Punkte</div>'
       +'<p>Trag dich in die Bestenliste der Abteilung ein.</p>'
       +'<input id="gname" maxlength="40" placeholder="Dein Name" value="'+esc(lastName)+'">'
       +'<div class="row"><button class="btn" id="save">Eintragen</button><button class="btn-ghost" id="again">Nochmal</button></div>';
@@ -378,7 +384,7 @@ load();
       var nm=document.getElementById('gname').value.trim(); if(!nm){document.getElementById('gname').focus();return;}
       lastName=nm; var b=this; b.disabled=true; b.textContent='Wird gesendet ...';
       fetch('/api/scores',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nm,score:score})})
-        .then(function(r){return r.json();}).then(function(d){ renderBoard(d.scores,nm,score); if(typeof confetti==='function') confetti(); idleOverlay('Eingetragen! 🎉 Sammle Tickets 🎟️ und spring über die Android-Partner 🤖.'); })
+        .then(function(r){return r.json();}).then(function(d){ renderBoard(d.scores,nm,score); if(typeof confetti==='function') confetti(); idleOverlay('Eingetragen! 🎉 Noch eine Fahrt über die Rheinkirmes?'); })
         .catch(function(){ b.disabled=false; b.textContent='Eintragen'; alert('Konnte nicht gespeichert werden.'); });
     };
     var gn=document.getElementById('gname'); if(gn) gn.focus();
@@ -408,11 +414,34 @@ load();
     ctx.strokeStyle='#c9962f'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,groundY-h); ctx.lineTo(cx,groundY-h-14); ctx.stroke();
     ctx.fillStyle='#f5b301'; ctx.beginPath(); ctx.moveTo(cx,groundY-h-14); ctx.lineTo(cx+12,groundY-h-10.5); ctx.lineTo(cx,groundY-h-7); ctx.closePath(); ctx.fill();
   }
+  function coaster(x0,base){
+    ctx.save(); ctx.strokeStyle='rgba(230,0,0,.4)'; ctx.lineWidth=4; ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x0,base); ctx.lineTo(x0+26,base-74);
+    ctx.quadraticCurveTo(x0+60,base-98,x0+92,base-42);
+    ctx.quadraticCurveTo(x0+120,base-8,x0+150,base-42);
+    ctx.quadraticCurveTo(x0+186,base-96,x0+222,base-42);
+    ctx.quadraticCurveTo(x0+252,base-6,x0+282,base); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x0+150,base-66,24,0,7); ctx.stroke();
+    ctx.strokeStyle='rgba(37,40,43,.2)'; ctx.lineWidth=2;
+    for(var sx=x0+12;sx<x0+282;sx+=32){ ctx.beginPath(); ctx.moveTo(sx,base); ctx.lineTo(sx,groundY); ctx.stroke(); }
+    ctx.restore();
+  }
+  function ferris(cx,cy,r,rot){
+    ctx.save();
+    ctx.strokeStyle='rgba(37,40,43,.28)'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx-r*0.55,groundY); ctx.lineTo(cx,cy); ctx.lineTo(cx+r*0.55,groundY); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.stroke();
+    ctx.lineWidth=2;
+    for(var k=0;k<8;k++){ var a=rot+k*Math.PI/4, x2=cx+Math.cos(a)*r, y2=cy+Math.sin(a)*r; ctx.strokeStyle='rgba(37,40,43,.28)'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x2,y2); ctx.stroke(); ctx.fillStyle=(k%2)?'#e60000':'#f5b301'; ctx.beginPath(); ctx.arc(x2,y2,5,0,7); ctx.fill(); }
+    ctx.fillStyle='#c9962f'; ctx.beginPath(); ctx.arc(cx,cy,4,0,7); ctx.fill();
+    ctx.restore();
+  }
   function txt(s,x,y,px){ ctx.font=px+'px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillText(s,x,y); }
   function draw(){
     var g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#fff3d6'); g.addColorStop(0.6,'#ffd9c2'); g.addColorStop(1,'#ffbfbf'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
     ctx.fillStyle='rgba(245,179,1,.28)'; ctx.beginPath(); ctx.arc(W-90,60,46,0,7); ctx.fill();
     ctx.fillStyle='rgba(245,179,1,.9)'; ctx.beginPath(); ctx.arc(W-90,60,30,0,7); ctx.fill();
+    var coff=(dist*0.5)%340; for(var cx0=-340;cx0<W+340;cx0+=340){ coaster(cx0-coff,groundY-8); }
+    var P=W+260, fx=P-((dist*0.5)%P)-130; ferris(fx,groundY-104,46,elapsed*0.5);
     var toff=(dist*0.35)%200; for(var x=-200;x<W+200;x+=200){ tent(x-toff,140); }
     ctx.strokeStyle='rgba(37,40,43,.35)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,28); ctx.quadraticCurveTo(W/2,64,W,28); ctx.stroke();
     var cols=['#e60000','#f5b301','#ffffff']; for(var b=0;b<12;b++){ var bx=(b+0.5)*(W/12), by=28+Math.sin(b/11*Math.PI)*34+6; ctx.fillStyle=cols[b%3]; ctx.beginPath(); ctx.arc(bx,by,4,0,7); ctx.fill(); }
@@ -435,6 +464,43 @@ load();
   cv.addEventListener('pointerdown',function(e){ e.preventDefault(); if(state==='run')jump(); else if(state==='idle')start(); });
   var sb=document.getElementById('startbtn'); if(sb) sb.onclick=start;
   reset(); draw(); loadScores();
+})();
+
+/* ---------- Geburtstagsmusik: Happy Birthday (Web Audio) ---------- */
+(function(){
+  var btn=document.getElementById('music'); if(!btn) return;
+  var ctx=null, master=null, on=true, playing=false, timer=null;
+  // [frequency Hz, beats] — "Happy Birthday to You"
+  var mel=[
+    [261.63,.75],[261.63,.25],[293.66,1],[261.63,1],[349.23,1],[329.63,2],
+    [261.63,.75],[261.63,.25],[293.66,1],[261.63,1],[392.00,1],[349.23,2],
+    [261.63,.75],[261.63,.25],[523.25,1],[440.00,1],[349.23,1],[329.63,1],[293.66,2],
+    [466.16,.75],[466.16,.25],[440.00,1],[349.23,1],[392.00,1],[349.23,2]
+  ];
+  var BEAT=0.42;
+  function ensure(){ if(ctx) return; try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); master=ctx.createGain(); master.gain.value=0.11; master.connect(ctx.destination); }catch(e){ ctx=null; } }
+  function note(freq,t,dur){
+    var o=ctx.createOscillator(), g=ctx.createGain();
+    o.type='triangle'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.9,t+0.03);
+    g.gain.setValueAtTime(0.9,t+dur*0.7); g.gain.linearRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.03);
+  }
+  function schedule(){
+    if(!on||!ctx){ return; }
+    var t=ctx.currentTime+0.07, total=0;
+    for(var i=0;i<mel.length;i++){ var d=mel[i][1]*BEAT; note(mel[i][0],t,d*0.9); t+=d; total+=d; }
+    total+=BEAT*2.5;
+    timer=setTimeout(schedule, total*1000);
+  }
+  function startMusic(){ ensure(); if(!ctx) return; if(ctx.state==='suspended'){ try{ctx.resume();}catch(e){} } if(master) master.gain.value=0.11; if(!playing){ playing=true; schedule(); } }
+  function stopMusic(){ playing=false; if(timer){ clearTimeout(timer); timer=null; } if(master&&ctx){ try{ master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.06); }catch(e){} } }
+  function setState(s){ on=s; btn.classList.toggle('on',on); btn.textContent=on?'🎵':'🔇'; }
+  btn.addEventListener('click',function(){ setState(!on); if(on) startMusic(); else stopMusic(); });
+  // Default on, but browsers block autoplay: kick off at the first real user gesture.
+  function firstGesture(){ if(on && !playing) startMusic(); document.removeEventListener('pointerdown',firstGesture); document.removeEventListener('keydown',firstGesture); }
+  document.addEventListener('pointerdown',firstGesture); document.addEventListener('keydown',firstGesture);
+  setState(true);
 })();
 </script>
 </body>
