@@ -428,6 +428,7 @@ load();
     ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=3;
     for(var tx=-(((off%20)+20)%20); tx<=W; tx+=20){ var wx=off+tx, ty=terrain(wx), a=Math.atan(slope(wx)); ctx.beginPath(); ctx.moveTo(tx+Math.sin(a)*6, ty-Math.cos(a)*6); ctx.lineTo(tx-Math.sin(a)*6, ty+Math.cos(a)*6); ctx.stroke(); }
     for(var slot=Math.floor((off-40)/STARGAP); slot*STARGAP<off+W+40; slot++){ if(collected[slot])continue; var sxw=slot*STARGAP, sy=terrain(sxw)-55, scr=sxw-off; if(scr<-30||scr>W+30)continue; txt('⭐',scr,sy+8,22); }
+    if(diving){ ctx.strokeStyle='rgba(230,0,0,.5)'; ctx.lineWidth=3; ctx.lineCap='round'; for(var q=0;q<4;q++){ var ly=carY-24+q*12; ctx.beginPath(); ctx.moveTo(CARSX-30-q*4,ly); ctx.lineTo(CARSX-62-q*9,ly); ctx.stroke(); } }
     var ang=airborne?Math.max(-0.7,Math.min(0.7,Math.atan2(vy,vx))):Math.atan(slope(carX));
     ctx.save(); ctx.translate(CARSX,carY); ctx.rotate(ang);
     ctx.fillStyle='#e60000'; ctx.beginPath(); ctx.moveTo(-22,-1); ctx.lineTo(-19,-15); ctx.lineTo(15,-15); ctx.lineTo(22,-1); ctx.lineTo(22,5); ctx.lineTo(-22,5); ctx.closePath(); ctx.fill();
@@ -437,6 +438,12 @@ load();
     txt('🤵',CARSX-1,carY-14,26);
     if(airborne && air>0.32){ ctx.fillStyle='#e60000'; ctx.font='800 15px Inter,Arial,sans-serif'; ctx.textAlign='center'; ctx.fillText('AIRTIME!',CARSX,carY-38); }
     if(state==='run' && spd<215){ ctx.fillStyle='#e60000'; ctx.font='800 18px Inter,Arial,sans-serif'; ctx.textAlign='center'; ctx.fillText('⚠ Zu wenig Schwung — bergab halten!',W/2,42); }
+    if(state==='run'){
+      ctx.textAlign='left'; ctx.font='800 15px Inter,Arial,sans-serif';
+      if(diving){ ctx.fillStyle='#e60000'; ctx.fillText('⬇ ABTAUCHEN',18,30); }
+      else { ctx.fillStyle='rgba(37,40,43,.5)'; ctx.fillText('Leertaste / Finger HALTEN = abtauchen',18,30); }
+      ctx.textAlign='center';
+    }
   }
   function renderBoard(list,meName,meScore){
     if(!list||!list.length){ boardEl.innerHTML='<li class="empty">Noch keine Einträge — leg vor!</li>'; return; }
