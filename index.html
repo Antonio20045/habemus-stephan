@@ -465,7 +465,7 @@ load();
 /* ---------- Geburtstagsmusik: Happy Birthday (Web Audio) ---------- */
 (function(){
   var btn=document.getElementById('music'); if(!btn) return;
-  var ctx=null, master=null, on=true, playing=false, timer=null;
+  var ctx=null, master=null, playing=false, timer=null, voices=[], round=0, ROUNDS=3;
   // [frequency Hz, beats] — "Happy Birthday to You"
   var mel=[
     [261.63,.75],[261.63,.25],[293.66,1],[261.63,1],[349.23,1],[329.63,2],
@@ -481,22 +481,45 @@ load();
     g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.9,t+0.03);
     g.gain.setValueAtTime(0.9,t+dur*0.7); g.gain.linearRampToValueAtTime(0.0001,t+dur);
     o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.03);
+    voices.push(o);
+    o.onended=function(){ var i=voices.indexOf(o); if(i>-1) voices.splice(i,1); try{ g.disconnect(); }catch(e){} };
   }
-  function schedule(){
-    if(!on||!ctx){ return; }
+  function clearTimer(){ if(timer){ clearTimeout(timer); timer=null; } }
+  // stoppt nur die uebergebene Liste -> kollidiert nie mit einem neuen Durchlauf
+  function kill(list){ for(var i=0;i<list.length;i++){ try{ list[i].onended=null; list[i].stop(); list[i].disconnect(); }catch(e){} } }
+  function playRound(){
+    if(!playing||!ctx) return;
     var t=ctx.currentTime+0.07, total=0;
     for(var i=0;i<mel.length;i++){ var d=mel[i][1]*BEAT; note(mel[i][0],t,d*0.9); t+=d; total+=d; }
-    total+=BEAT*2.5;
-    timer=setTimeout(schedule, total*1000);
+    round++;
+    if(round<ROUNDS) timer=setTimeout(playRound,(total+BEAT*2.5)*1000);
+    else timer=setTimeout(finish,(total+0.45)*1000);
   }
-  function startMusic(){ ensure(); if(!ctx) return; if(ctx.state==='suspended'){ try{ctx.resume();}catch(e){} } if(master) master.gain.value=0.11; if(!playing){ playing=true; schedule(); } }
-  function stopMusic(){ playing=false; if(timer){ clearTimeout(timer); timer=null; } if(master&&ctx){ try{ master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.06); }catch(e){} } }
-  function setState(s){ on=s; btn.classList.toggle('on',on); btn.textContent=on?'🎵':'🔇'; }
-  btn.addEventListener('click',function(){ setState(!on); if(on) startMusic(); else stopMusic(); });
-  // Default on, but browsers block autoplay: kick off at the first real user gesture.
-  function firstGesture(){ if(on && !playing) startMusic(); document.removeEventListener('pointerdown',firstGesture); document.removeEventListener('keydown',firstGesture); }
+  function finish(){ playing=false; clearTimer(); voices.length=0; setBtn(false); }
+  function startMusic(){
+    ensure(); if(!ctx) return;
+    if(ctx.state==='suspended'){ try{ ctx.resume(); }catch(e){} }
+    clearTimer(); var old=voices.slice(); voices.length=0; kill(old);
+    try{ master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setValueAtTime(0.11,ctx.currentTime); }catch(e){ master.gain.value=0.11; }
+    playing=true; round=0; setBtn(true); playRound();
+  }
+  function stopMusic(){
+    playing=false; clearTimer();
+    var old=voices.slice(); voices.length=0;
+    if(ctx&&master){ try{ master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0.0001,ctx.currentTime,0.03); }catch(e){} }
+    setTimeout(function(){ kill(old); },120);
+    setBtn(false);
+  }
+  function setBtn(on){ btn.classList.toggle('on',!!on); btn.textContent=on?'🎵':'🔇'; var t=on?'Geburtstagsmusik läuft — klicken zum Stoppen':'Geburtstagsmusik abspielen'; btn.title=t; btn.setAttribute('aria-label',t); }
+  btn.addEventListener('click',function(){ if(playing) stopMusic(); else startMusic(); });
+  // Autoplay-Sperre: erst bei der ersten echten Interaktion starten (Klick auf den Button macht dessen eigener Handler)
+  function firstGesture(e){
+    document.removeEventListener('pointerdown',firstGesture); document.removeEventListener('keydown',firstGesture);
+    if(e && e.target && btn.contains(e.target)) return;
+    if(!playing) startMusic();
+  }
   document.addEventListener('pointerdown',firstGesture); document.addEventListener('keydown',firstGesture);
-  setState(true);
+  setBtn(true);
 })();
 </script>
 </body>
