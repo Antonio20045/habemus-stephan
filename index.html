@@ -367,10 +367,10 @@ load();
   var ctx=cv.getContext('2d'), W=cv.width, H=cv.height, groundY=H-42;
   var hud=document.getElementById('hud'), ov=document.getElementById('ov'), boardEl=document.getElementById('board');
   var state='idle', last=0, lastName='';
-  var car, obstacles, stars, speed, dist, scoreF, score, spawnO, spawnS;
-  var GY=H-56, GRAV=2200, JUMP=660, JUMP2=570;
-  function reset(){ car={x:112,y:GY,vy:0,jumps:2,w:38,h:30}; obstacles=[]; stars=[]; speed=320; dist=0; scoreF=0; score=0; spawnO=340; spawnS=560; }
-  function jump(){ if(state!=='run')return; if(car.jumps>0){ car.vy=(car.jumps===2?-JUMP:-JUMP2); car.jumps--; } }
+  var car, obstacles, stars, speed, elapsed, dist, scoreF, score, spawnO, spawnS;
+  var GY=H-56, GRAV=2100, JUMP=680;
+  function reset(){ car={x:112,y:GY,vy:0,jumps:2,w:38,h:30}; obstacles=[]; stars=[]; speed=270; elapsed=0; dist=0; scoreF=0; score=0; spawnO=0.7; spawnS=0.6; }
+  function jump(){ if(state!=='run')return; if(car.jumps>0){ car.vy=-JUMP; car.jumps--; } }
   function start(){ if(state==='run')return; reset(); state='run'; ov.classList.add('hide'); last=performance.now(); requestAnimationFrame(loop); }
   function idleOverlay(txt){ state='idle'; ov.classList.remove('hide'); ov.innerHTML='<h3>Der Achterbahn-Run</h3><p>'+txt+'</p><div class="row"><button class="btn" id="startbtn">Los geht’s</button></div>'; document.getElementById('startbtn').onclick=start; }
   function gameOver(){
@@ -392,21 +392,21 @@ load();
   }
   function loop(t){
     if(state!=='run') return;
-    var dt=Math.min(0.04,(t-last)/1000); last=t;
-    speed=Math.min(700,320+dist*0.012); var move=speed*dt; dist+=move;
+    var dt=Math.min(0.05,(t-last)/1000); last=t; elapsed+=dt;
+    speed=Math.min(640,270+elapsed*15); var move=speed*dt; dist+=move;
     car.vy+=GRAV*dt; car.y+=car.vy*dt;
     if(car.y>=GY){ car.y=GY; car.vy=0; car.jumps=2; }
     var i;
-    spawnO-=move; if(spawnO<=0){ obstacles.push({x:W+30,w:30,h:34}); spawnO=460+Math.random()*300; }
-    spawnS-=move; if(spawnS<=0){ stars.push({x:W+30,y:GY-72-Math.random()*40,got:false}); spawnS=420+Math.random()*380; }
+    spawnO-=dt; if(spawnO<=0){ obstacles.push({x:W+30,w:30,h:30+Math.floor(Math.random()*12)}); spawnO=Math.max(0.6,(0.85+Math.random()*0.7)*(300/speed)); }
+    spawnS-=dt; if(spawnS<=0){ stars.push({x:W+30,y:GY-(58+Math.random()*95),got:false}); spawnS=0.8+Math.random()*1.2; }
     for(i=obstacles.length-1;i>=0;i--){ obstacles[i].x-=move; if(obstacles[i].x<-50)obstacles.splice(i,1); }
     for(i=stars.length-1;i>=0;i--){ stars[i].x-=move; if(stars[i].x<-50)stars.splice(i,1); }
-    scoreF+=dt*22; score=Math.floor(scoreF);
+    scoreF+=dt*24; score=Math.floor(scoreF);
     var pL=car.x-car.w/2+5, pR=car.x+car.w/2-5, pT=car.y-car.h+4, pB=car.y-2;
     for(i=0;i<obstacles.length;i++){ var o=obstacles[i], oL=o.x-o.w/2+5, oR=o.x+o.w/2-5, oT=GY-o.h+5;
       if(pR>oL && pL<oR && pB>oT){ return gameOver(); } }
     for(i=0;i<stars.length;i++){ var st=stars[i]; if(st.got)continue;
-      if(Math.abs(st.x-car.x)<30 && Math.abs(st.y-(car.y-car.h/2))<34){ st.got=true; scoreF+=25; } }
+      if(Math.abs(st.x-car.x)<30 && Math.abs(st.y-(car.y-car.h/2))<34){ st.got=true; scoreF+=10; } }
     stars=stars.filter(function(s){return !s.got;});
     draw(); hud.textContent=score+' Punkte'; requestAnimationFrame(loop);
   }
@@ -440,7 +440,7 @@ load();
     ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=3;
     var doff=dist%26; for(var d=-26;d<W;d+=26){ ctx.beginPath(); ctx.moveTo(d-doff,GY+3); ctx.lineTo(d-doff,GY+17); ctx.stroke(); }
     for(var m=0;m<stars.length;m++){ txt('⭐',stars[m].x,stars[m].y+8,26); }
-    for(var k=0;k<obstacles.length;k++){ txt('🤖',obstacles[k].x,GY+4,40); }
+    for(var k=0;k<obstacles.length;k++){ txt('🤖',obstacles[k].x,GY+4,obstacles[k].h+10); }
     var tilt=Math.max(-0.32,Math.min(0.32,car.vy/1900));
     ctx.save(); ctx.translate(car.x,car.y); ctx.rotate(tilt);
     ctx.fillStyle='#e60000'; ctx.beginPath(); ctx.moveTo(-22,-1); ctx.lineTo(-19,-15); ctx.lineTo(15,-15); ctx.lineTo(22,-1); ctx.lineTo(22,5); ctx.lineTo(-22,5); ctx.closePath(); ctx.fill();
