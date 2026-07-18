@@ -223,14 +223,14 @@ section{padding:60px 0}
 <div class="divider"></div>
 <section><div class="wrap">
 <div class="h2">Der <span class="accent">Achterbahn-Ritt</span></div>
-<p class="sub">Echte Achterbahn-Physik auf der Düsseldorfer Rheinkirmes: Halte gedrückt, um abzutauchen und Schwung zu holen — flieg über die Kuppen für maximale Airtime und sammle Sterne ⭐. Hol so viele Punkte wie möglich, bevor die Zeit abläuft! (Leertaste oder Tippen gedrückt halten)</p>
+<p class="sub">Echte Achterbahn-Physik auf der Düsseldorfer Rheinkirmes: <b>Bergab gedrückt halten</b> zum Abtauchen, <b>am Anstieg loslassen</b> — so pumpst du Schwung. Verlierst du zu viel Schwung, bleibst du am Berg stecken und rollst zurück: Fahrt vorbei! Flieg über die Kuppen für Airtime und sammle Sterne ⭐. Wie weit kommst du? (Leertaste oder Tippen halten)</p>
 <div class="gamewrap">
   <div class="game" id="game">
     <div class="hud" id="hud">0 Punkte</div>
     <canvas id="cv" width="860" height="300"></canvas>
     <div class="overlay" id="ov">
       <h3>Der Achterbahn-Ritt</h3>
-      <p>Steig in die Achterbahn! Halte gedrückt zum Abtauchen — je steiler du ins Tal tauchst, desto mehr Schwung und Airtime über der nächsten Kuppe. Sammle Sterne ⭐ und fahr auf Highscore, bevor die Zeit endet.</p>
+      <p>Steig ein! <b>Im Gefälle gedrückt halten</b>, <b>am Anstieg loslassen</b> — so pumpst du Schwung wie auf einer echten Achterbahn. Zu wenig Schwung am Berg = Wagen rollt zurück, Fahrt vorbei. Je länger du durchhältst, desto mehr Punkte.</p>
       <div class="row"><button class="btn" id="startbtn">Los geht's</button></div>
     </div>
   </div>
@@ -367,18 +367,19 @@ load();
   var ctx=cv.getContext('2d'), W=cv.width, H=cv.height, groundY=H-42;
   var hud=document.getElementById('hud'), ov=document.getElementById('ov'), boardEl=document.getElementById('board');
   var state='idle', last=0, lastName='', diving=false;
-  var carX, carY, vx, vy, airborne, air, elapsed, timeLeft, score, collected, bestAir;
-  var CARSX=150, G=1500, GD=3000, MINV0=250, MAXV=820, GAME=42, STARGAP=140;
-  function terrain(x){ return H*0.56 + Math.sin(x*0.011)*54 + Math.sin(x*0.022+1.3)*26 + Math.sin(x*0.041+0.7)*12; }
+  var carX, carY, vx, vy, spd, airborne, air, elapsed, score, collected, bestAir;
+  var CARSX=150, G=560, GD=1450, F0=0.14, FRAMP=0.004, START=620, MAXV=1100, STARGAP=140;
+  function amp(x){ return 1 + Math.min(0.35, x/40000); }
+  function terrain(x){ var a=amp(x); return H*0.55 + (Math.sin(x*0.009)*46 + Math.sin(x*0.020+1.1)*16)*a; }
   function slope(x){ return (terrain(x+4)-terrain(x-4))/8; }
-  function reset(){ carX=0; carY=terrain(0); vx=320; vy=0; airborne=false; air=0; elapsed=0; timeLeft=GAME; score=0; collected={}; bestAir=0; diving=false; }
+  function reset(){ carX=0; carY=terrain(0); vx=START; vy=0; spd=START; airborne=false; air=0; elapsed=0; score=0; collected={}; bestAir=0; diving=false; }
   function start(){ if(state==='run')return; reset(); state='run'; ov.classList.add('hide'); last=performance.now(); requestAnimationFrame(loop); }
   function idleOverlay(txt){ state='idle'; ov.classList.remove('hide'); ov.innerHTML='<h3>Der Achterbahn-Ritt</h3><p>'+txt+'</p><div class="row"><button class="btn" id="startbtn">Los geht’s</button></div>'; document.getElementById('startbtn').onclick=start; }
   function gameOver(){
     state='over';
     ov.classList.remove('hide');
-    ov.innerHTML='<h3>Zeit um! 🎢</h3><div class="big">'+score+' Punkte</div>'
-      +'<p>Beste Airtime: '+bestAir.toFixed(2)+' s. Trag dich in die Bestenliste ein.</p>'
+    ov.innerHTML='<h3>Steckengeblieben! 🎢</h3><div class="big">'+score+' Punkte</div>'
+      +'<p>Zu wenig Schwung am Anstieg — der Wagen rollt zurück. Beste Airtime: '+bestAir.toFixed(2)+' s. Trag dich in die Bestenliste ein.</p>'
       +'<input id="gname" maxlength="40" placeholder="Dein Name" value="'+esc(lastName)+'">'
       +'<div class="row"><button class="btn" id="save">Eintragen</button><button class="btn-ghost" id="again">Nochmal</button></div>';
     document.getElementById('again').onclick=start;
@@ -393,22 +394,22 @@ load();
   }
   function loop(t){
     if(state!=='run') return;
-    var dt=Math.min(0.04,(t-last)/1000); last=t; elapsed+=dt; timeLeft-=dt;
-    var minv=Math.min(470,MINV0+elapsed*5), g=diving?GD:G;
-    carX+=vx*dt; vy+=g*dt; if(vy<-820)vy=-820; carY+=vy*dt; if(carY<-8){carY=-8; if(vy<0)vy=0;}
+    var dt=Math.min(0.04,(t-last)/1000); last=t; elapsed+=dt;
+    var g=diving?GD:G, FRIC=F0+elapsed*FRAMP;
+    carX+=vx*dt; vy+=g*dt; if(vy<-900)vy=-900; carY+=vy*dt; if(carY<-8){carY=-8; if(vy<0)vy=0;}
     var gh=terrain(carX);
     if(carY>=gh){
       if(airborne){ if(air>bestAir)bestAir=air; if(air>0.22) score+=Math.round(air*air*210); air=0; }
       airborne=false; carY=gh;
-      var s=slope(carX), L=Math.sqrt(1+s*s), tx=1/L, ty=s/L, dot=vx*tx+vy*ty; if(dot<0)dot=0;
-      vx=dot*tx; vy=dot*ty;
-      if(vx<minv){vx=minv; vy=vx*s;} if(vx>MAXV){vx=MAXV; vy=vx*s;}
-    } else { airborne=true; air+=dt; }
-    score+=vx*dt*0.03;
+      var s=slope(carX), L=Math.sqrt(1+s*s), tx=1/L, ty=s/L, dot=vx*tx+vy*ty;
+      dot*=(1-FRIC*dt); if(dot>MAXV)dot=MAXV;
+      if(dot<-40){ score=Math.round(score); return gameOver(); }
+      spd=dot; vx=dot*tx; vy=dot*ty;
+    } else { airborne=true; air+=dt; spd=Math.sqrt(vx*vx+vy*vy); }
+    score+=Math.max(0,vx)*dt*0.03;
     var near=Math.round(carX/STARGAP);
     for(var ds=-1;ds<=1;ds++){ var sl=near+ds; if(collected[sl])continue; var sxw=sl*STARGAP, sy=terrain(sxw)-55; if(Math.abs(carX-sxw)<26 && Math.abs(carY-sy)<40){ collected[sl]=true; score+=30; } }
-    if(timeLeft<=0){ score=Math.round(score); return gameOver(); }
-    draw(); hud.textContent=Math.round(score)+' · ⏱ '+Math.ceil(timeLeft)+'s'; requestAnimationFrame(loop);
+    draw(); hud.textContent=Math.round(score)+' Punkte'; requestAnimationFrame(loop);
   }
   function tent(x,w,gY){ var h=w*0.7, cx=x+w/2; ctx.fillStyle='#ffe0e0'; ctx.beginPath(); ctx.moveTo(x,gY); ctx.lineTo(cx,gY-h); ctx.lineTo(x+w,gY); ctx.closePath(); ctx.fill(); ctx.fillStyle='rgba(230,0,0,.38)'; for(var s=0;s<5;s++){ var xa=x+(w/5)*s, xb=x+(w/5)*(s+0.5); ctx.beginPath(); ctx.moveTo(xa,gY); ctx.lineTo(cx,gY-h); ctx.lineTo(xb,gY); ctx.closePath(); ctx.fill(); } }
   function ferris(cx,cy,r,rot,gY){ ctx.save(); ctx.strokeStyle='rgba(37,40,43,.2)'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx-r*0.55,gY); ctx.lineTo(cx,cy); ctx.lineTo(cx+r*0.55,gY); ctx.stroke(); ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.stroke(); ctx.lineWidth=2; for(var k=0;k<8;k++){ var a=rot+k*Math.PI/4,x2=cx+Math.cos(a)*r,y2=cy+Math.sin(a)*r; ctx.strokeStyle='rgba(37,40,43,.2)'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x2,y2); ctx.stroke(); ctx.fillStyle=(k%2)?'#e60000':'#f5b301'; ctx.beginPath(); ctx.arc(x2,y2,4,0,7); ctx.fill(); } ctx.restore(); }
@@ -435,6 +436,7 @@ load();
     ctx.restore();
     txt('🤵',CARSX-1,carY-14,26);
     if(airborne && air>0.32){ ctx.fillStyle='#e60000'; ctx.font='800 15px Inter,Arial,sans-serif'; ctx.textAlign='center'; ctx.fillText('AIRTIME!',CARSX,carY-38); }
+    if(state==='run' && spd<215){ ctx.fillStyle='#e60000'; ctx.font='800 18px Inter,Arial,sans-serif'; ctx.textAlign='center'; ctx.fillText('⚠ Zu wenig Schwung — bergab halten!',W/2,42); }
   }
   function renderBoard(list,meName,meScore){
     if(!list||!list.length){ boardEl.innerHTML='<li class="empty">Noch keine Einträge — leg vor!</li>'; return; }
