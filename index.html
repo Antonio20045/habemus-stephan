@@ -223,14 +223,14 @@ section{padding:60px 0}
 <div class="divider"></div>
 <section><div class="wrap">
 <div class="h2">Der <span class="accent">Achterbahn-Run</span></div>
-<p class="sub">Stephan im Achterbahn-Wagen über die Düsseldorfer Rheinkirmes: sammle Herstellerpunkte von Google, Xiaomi und Galaxy — mit Smartphones und Watches — und weiche Bomben 💣 aus. Leertaste, ↑ oder Tippen zum Springen (Doppelsprung geht auch).</p>
+<p class="sub">Stephan im Achterbahn-Wagen über die Düsseldorfer Rheinkirmes: fange die Marken-Badges von Google, Xiaomi und Galaxy — als Smartphones und Watches — und weiche Bomben 💣 aus. Leertaste, ↑ oder Tippen zum Springen (Doppelsprung geht auch).</p>
 <div class="gamewrap">
   <div class="game" id="game">
     <div class="hud" id="hud">0 Punkte</div>
     <canvas id="cv" width="860" height="300"></canvas>
     <div class="overlay" id="ov">
       <h3>Der Achterbahn-Run</h3>
-      <p>Sammle Herstellerpunkte von Google, Xiaomi und Galaxy (Smartphones und Watches). Weiche Bomben 💣 aus — eine Berührung beendet die Fahrt.</p>
+      <p>Fange die farbigen Google-, Xiaomi- und Galaxy-Badges (Smartphones und Watches). Weiche Bomben 💣 aus — eine Berührung beendet die Fahrt.</p>
       <div class="row"><button class="btn" id="startbtn">Los geht's</button></div>
     </div>
   </div>
@@ -398,7 +398,7 @@ load();
     if(car.y>=GY){ car.y=GY; car.vy=0; car.jumps=2; }
     var i;
     spawnO-=dt; if(spawnO<=0){ obstacles.push({x:W+30,w:30,h:30+Math.floor(Math.random()*12)}); spawnO=Math.max(0.6,(0.85+Math.random()*0.7)*(300/speed)); }
-    spawnS-=dt; if(spawnS<=0){ var tokens=['G📱','mi⌚','Galaxy📱']; stars.push({x:W+30,y:GY-(58+Math.random()*95),got:false,label:tokens[Math.floor(Math.random()*tokens.length)]}); spawnS=0.8+Math.random()*1.2; }
+    spawnS-=dt; if(spawnS<=0){ var brands=['google','xiaomi','galaxy'], brand=brands[Math.floor(Math.random()*brands.length)]; stars.push({x:W+34,y:GY-(58+Math.random()*95),got:false,brand:brand,device:Math.random()<0.5?'phone':'watch'}); spawnS=0.8+Math.random()*1.2; }
     for(i=obstacles.length-1;i>=0;i--){ obstacles[i].x-=move; if(obstacles[i].x<-50)obstacles.splice(i,1); }
     for(i=stars.length-1;i>=0;i--){ stars[i].x-=move; if(stars[i].x<-50)stars.splice(i,1); }
     scoreF+=dt*24; score=Math.floor(scoreF);
@@ -413,6 +413,32 @@ load();
   function tent(x,w,gY){ var h=w*0.7, cx=x+w/2; ctx.fillStyle='#ffe0e0'; ctx.beginPath(); ctx.moveTo(x,gY); ctx.lineTo(cx,gY-h); ctx.lineTo(x+w,gY); ctx.closePath(); ctx.fill(); ctx.fillStyle='rgba(230,0,0,.38)'; for(var s=0;s<5;s++){ var xa=x+(w/5)*s, xb=x+(w/5)*(s+0.5); ctx.beginPath(); ctx.moveTo(xa,gY); ctx.lineTo(cx,gY-h); ctx.lineTo(xb,gY); ctx.closePath(); ctx.fill(); } }
   function ferris(cx,cy,r,rot,gY){ ctx.save(); ctx.strokeStyle='rgba(37,40,43,.2)'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx-r*0.55,gY); ctx.lineTo(cx,cy); ctx.lineTo(cx+r*0.55,gY); ctx.stroke(); ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.stroke(); ctx.lineWidth=2; for(var k=0;k<8;k++){ var a=rot+k*Math.PI/4,x2=cx+Math.cos(a)*r,y2=cy+Math.sin(a)*r; ctx.strokeStyle='rgba(37,40,43,.2)'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x2,y2); ctx.stroke(); ctx.fillStyle=(k%2)?'#e60000':'#f5b301'; ctx.beginPath(); ctx.arc(x2,y2,4,0,7); ctx.fill(); } ctx.restore(); }
   function txt(s,x,y,px){ ctx.font=px+'px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillText(s,x,y); }
+  function drawBrandToken(t){
+    var x=t.x,y=t.y, isWatch=t.device==='watch';
+    ctx.save(); ctx.translate(x,y);
+    ctx.shadowColor='rgba(37,40,43,.18)'; ctx.shadowBlur=8; ctx.shadowOffsetY=3;
+    if(t.brand==='google'){
+      ctx.fillStyle='#fff'; ctx.strokeStyle='#d8dde5'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.roundRect(-29,-17,58,34,11); ctx.fill(); ctx.stroke();
+      ctx.shadowColor='transparent'; ctx.font='800 18px Inter,Arial,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#4285f4'; ctx.fillText('G',-13,1);
+      ctx.fillStyle='#ea4335'; ctx.beginPath(); ctx.arc(-6,-7,2.4,0,7); ctx.fill(); ctx.fillStyle='#fbbc05'; ctx.beginPath(); ctx.arc(-5,8,2.4,0,7); ctx.fill(); ctx.fillStyle='#34a853'; ctx.beginPath(); ctx.arc(-17,10,2.4,0,7); ctx.fill();
+      drawDevice(12,0,isWatch,'#4285f4');
+    }else if(t.brand==='xiaomi'){
+      ctx.fillStyle='#ff6900'; ctx.beginPath(); ctx.roundRect(-27,-17,54,34,10); ctx.fill();
+      ctx.shadowColor='transparent'; ctx.fillStyle='#fff'; ctx.font='800 16px Inter,Arial,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('mi',-8,1);
+      drawDevice(13,0,isWatch,'#fff');
+    }else{
+      ctx.fillStyle='#1d2540'; ctx.beginPath(); ctx.roundRect(-31,-17,62,34,17); ctx.fill();
+      ctx.shadowColor='transparent'; ctx.fillStyle='#fff'; ctx.font='800 8px Inter,Arial,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('GALAXY',-8,0);
+      drawDevice(18,0,isWatch,'#7ad7ff');
+    }
+    ctx.restore();
+  }
+  function drawDevice(x,y,isWatch,col){
+    ctx.save(); ctx.translate(x,y); ctx.strokeStyle=col; ctx.lineWidth=2;
+    if(isWatch){ ctx.beginPath(); ctx.roundRect(-5,-8,10,16,3); ctx.stroke(); ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(0,-8); ctx.moveTo(0,8); ctx.lineTo(0,13); ctx.stroke(); }
+    else{ ctx.beginPath(); ctx.roundRect(-6,-10,12,20,3); ctx.stroke(); ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(-3,6); ctx.lineTo(3,6); ctx.stroke(); }
+    ctx.restore();
+  }
   function coasterBg(x0){
     var base=GY-34;
     ctx.save(); ctx.strokeStyle='rgba(230,0,0,.26)'; ctx.lineWidth=4; ctx.lineJoin='round'; ctx.lineCap='round';
@@ -439,7 +465,7 @@ load();
     ctx.fillStyle='#b02a1a'; ctx.fillRect(0,GY-4,W,5);
     ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=3;
     var doff=dist%26; for(var d=-26;d<W;d+=26){ ctx.beginPath(); ctx.moveTo(d-doff,GY+3); ctx.lineTo(d-doff,GY+17); ctx.stroke(); }
-    for(var m=0;m<stars.length;m++){ txt(stars[m].label,stars[m].x,stars[m].y+8,22); }
+    for(var m=0;m<stars.length;m++){ drawBrandToken(stars[m]); }
     for(var k=0;k<obstacles.length;k++){ txt('💣',obstacles[k].x,GY+4,obstacles[k].h+10); }
     var tilt=Math.max(-0.32,Math.min(0.32,car.vy/1900));
     ctx.save(); ctx.translate(car.x,car.y); ctx.rotate(tilt);
