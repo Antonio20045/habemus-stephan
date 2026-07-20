@@ -223,14 +223,14 @@ section{padding:60px 0}
 <div class="divider"></div>
 <section><div class="wrap">
 <div class="h2">Der <span class="accent">Achterbahn-Run</span></div>
-<p class="sub">Stephan im Achterbahn-Wagen über die Düsseldorfer Rheinkirmes: sammle Sterne ⭐ und spring über die Android-Partner 🤖 — es wird immer schneller. Leertaste, ↑ oder Tippen zum Springen (Doppelsprung geht auch).</p>
+<p class="sub">Stephan im Achterbahn-Wagen über die Düsseldorfer Rheinkirmes: sammle Herstellerpunkte von Google, Xiaomi und Galaxy — mit Smartphones und Watches — und weiche Bomben 💣 aus. Leertaste, ↑ oder Tippen zum Springen (Doppelsprung geht auch).</p>
 <div class="gamewrap">
   <div class="game" id="game">
     <div class="hud" id="hud">0 Punkte</div>
     <canvas id="cv" width="860" height="300"></canvas>
     <div class="overlay" id="ov">
       <h3>Der Achterbahn-Run</h3>
-      <p>Sammle Sterne ⭐ und spring über die Android-Partner 🤖. Wer einen erwischt, beendet die Fahrt.</p>
+      <p>Sammle Herstellerpunkte von Google, Xiaomi und Galaxy (Smartphones und Watches). Weiche Bomben 💣 aus — eine Berührung beendet die Fahrt.</p>
       <div class="row"><button class="btn" id="startbtn">Los geht's</button></div>
     </div>
   </div>
@@ -376,7 +376,7 @@ load();
   function gameOver(){
     state='over';
     ov.classList.remove('hide');
-    ov.innerHTML='<h3>Erwischt! 🤖</h3><div class="big">'+score+' Punkte</div>'
+    ov.innerHTML='<h3>Erwischt! 💣</h3><div class="big">'+score+' Punkte</div>'
       +'<p>Trag dich in die Bestenliste der Abteilung ein.</p>'
       +'<input id="gname" maxlength="40" placeholder="Dein Name" value="'+esc(lastName)+'">'
       +'<div class="row"><button class="btn" id="save">Eintragen</button><button class="btn-ghost" id="again">Nochmal</button></div>';
@@ -398,7 +398,7 @@ load();
     if(car.y>=GY){ car.y=GY; car.vy=0; car.jumps=2; }
     var i;
     spawnO-=dt; if(spawnO<=0){ obstacles.push({x:W+30,w:30,h:30+Math.floor(Math.random()*12)}); spawnO=Math.max(0.6,(0.85+Math.random()*0.7)*(300/speed)); }
-    spawnS-=dt; if(spawnS<=0){ stars.push({x:W+30,y:GY-(58+Math.random()*95),got:false}); spawnS=0.8+Math.random()*1.2; }
+    spawnS-=dt; if(spawnS<=0){ var tokens=['G📱','mi⌚','Galaxy📱']; stars.push({x:W+30,y:GY-(58+Math.random()*95),got:false,label:tokens[Math.floor(Math.random()*tokens.length)]}); spawnS=0.8+Math.random()*1.2; }
     for(i=obstacles.length-1;i>=0;i--){ obstacles[i].x-=move; if(obstacles[i].x<-50)obstacles.splice(i,1); }
     for(i=stars.length-1;i>=0;i--){ stars[i].x-=move; if(stars[i].x<-50)stars.splice(i,1); }
     scoreF+=dt*24; score=Math.floor(scoreF);
@@ -406,7 +406,7 @@ load();
     for(i=0;i<obstacles.length;i++){ var o=obstacles[i], oL=o.x-o.w/2+5, oR=o.x+o.w/2-5, oT=GY-o.h+5;
       if(pR>oL && pL<oR && pB>oT){ return gameOver(); } }
     for(i=0;i<stars.length;i++){ var st=stars[i]; if(st.got)continue;
-      if(Math.abs(st.x-car.x)<30 && Math.abs(st.y-(car.y-car.h/2))<34){ st.got=true; scoreF+=10; } }
+      if(Math.abs(st.x-car.x)<30 && Math.abs(st.y-(car.y-car.h/2))<34){ st.got=true; scoreF+=15; } }
     stars=stars.filter(function(s){return !s.got;});
     draw(); hud.textContent=score+' Punkte'; requestAnimationFrame(loop);
   }
@@ -439,8 +439,8 @@ load();
     ctx.fillStyle='#b02a1a'; ctx.fillRect(0,GY-4,W,5);
     ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=3;
     var doff=dist%26; for(var d=-26;d<W;d+=26){ ctx.beginPath(); ctx.moveTo(d-doff,GY+3); ctx.lineTo(d-doff,GY+17); ctx.stroke(); }
-    for(var m=0;m<stars.length;m++){ txt('⭐',stars[m].x,stars[m].y+8,26); }
-    for(var k=0;k<obstacles.length;k++){ txt('🤖',obstacles[k].x,GY+4,obstacles[k].h+10); }
+    for(var m=0;m<stars.length;m++){ txt(stars[m].label,stars[m].x,stars[m].y+8,22); }
+    for(var k=0;k<obstacles.length;k++){ txt('💣',obstacles[k].x,GY+4,obstacles[k].h+10); }
     var tilt=Math.max(-0.32,Math.min(0.32,car.vy/1900));
     ctx.save(); ctx.translate(car.x,car.y); ctx.rotate(tilt);
     ctx.fillStyle='#e60000'; ctx.beginPath(); ctx.moveTo(-22,-1); ctx.lineTo(-19,-15); ctx.lineTo(15,-15); ctx.lineTo(22,-1); ctx.lineTo(22,5); ctx.lineTo(-22,5); ctx.closePath(); ctx.fill();
