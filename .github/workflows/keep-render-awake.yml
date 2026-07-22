@@ -1,0 +1,16 @@
+name: Render wach halten
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Stephan-Seite aufrufen
+        run: curl --fail --silent --show-error --max-time 120 https://geburtstag-stephan.onrender.com/ > /dev/null
