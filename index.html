@@ -74,16 +74,16 @@ section{padding:60px 0}
 .gb-count b{color:var(--vf-red);display:inline-block}
 .gb-count b.bump{animation:bump .6s var(--spring)}
 @keyframes bump{0%{transform:scale(1)}45%{transform:scale(1.5)}100%{transform:scale(1)}}
-.entries{display:flex;flex-direction:column;gap:22px;max-width:720px;margin:26px auto 0;perspective:1100px}
-@keyframes dropNew{0%{transform:translateY(-44px) scale(.82)}55%{transform:translateY(10px) scale(1.04)}78%{transform:translateY(-3px) scale(1)}100%{transform:none}}
+.entries{display:flex;flex-direction:column;gap:22px;max-width:720px;margin:26px auto 0}
+@keyframes dropNew{0%{opacity:0;transform:translateY(-24px) scale(.98)}55%{opacity:1;transform:translateY(7px) scale(1.015)}78%{opacity:1;transform:translateY(-2px) scale(1)}100%{opacity:1;transform:none}}
 @keyframes ringGlow{0%{box-shadow:0 0 0 0 rgba(245,179,1,.75),0 14px 44px rgba(0,0,0,.10)}70%{box-shadow:0 0 0 22px rgba(245,179,1,0),0 14px 44px rgba(0,0,0,.10)}100%{box-shadow:0 14px 44px rgba(0,0,0,.10)}}
 @keyframes shimmer{0%{background-position:-120px 0}100%{background-position:260px 0}}
 @keyframes badgePop{0%{opacity:0;transform:scale(.4) rotate(-12deg)}60%{opacity:1;transform:scale(1.15) rotate(4deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
-.gwish{position:relative;background:#fff;border-radius:20px;padding:36px 40px 30px;box-shadow:0 14px 44px rgba(0,0,0,.10);overflow:hidden;transform-origin:50% 100%;transition:box-shadow .3s var(--vf-ease);will-change:transform,opacity}
+.gwish{position:relative;background:#fff;border-radius:20px;padding:36px 40px 30px;box-shadow:0 14px 44px rgba(0,0,0,.10);overflow:hidden;transform:none;transform-origin:50% 100%;transition:transform .45s var(--vf-ease),box-shadow .3s var(--vf-ease);will-change:transform}
 .gwish .bar{position:absolute;left:0;top:0;bottom:0;width:6px;border-radius:20px 0 0 20px;background:linear-gradient(180deg,var(--vf-red),var(--vf-gold))}
 .gwish .dot{position:absolute;left:19px;top:24px;width:14px;height:14px;border-radius:50%;background:var(--vf-gold);box-shadow:0 0 0 2px var(--vf-gold)}
 .gwish .quote{position:absolute;top:8px;right:26px;font-size:64px;line-height:1;color:var(--vf-red);opacity:.1;font-family:Georgia,serif}
-.gwish .emsg{font-size:17px;line-height:1.62;white-space:pre-wrap;word-break:break-word;position:relative;padding-left:16px;color:var(--vf-ink)}
+.gwish .emsg{font-size:17px;line-height:1.62;white-space:pre-wrap;word-break:break-word;position:relative;padding-left:16px;color:var(--vf-ink);opacity:1;transform:none}
 .gwish .ewho{margin-top:16px;font-size:13.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--vf-red);padding-left:16px}
 .gwish .ewho::before{content:"";display:inline-block;width:22px;height:2px;background:var(--vf-red);vertical-align:middle;margin-right:10px;transform:translateY(-2px)}
 .gwish.is-new{animation:dropNew .8s var(--spring) both,ringGlow 1.9s ease-out .3s 1}
@@ -319,19 +319,8 @@ function render(list,newId){
 }
 // Scroll-driven 3D reveal for the greeting cards (like the newest Ralf page).
 function tiltCards(){
-  var cards=document.querySelectorAll('#e .gwish'); if(!cards.length) return;
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ for(var q=0;q<cards.length;q++){cards[q].style.transform='';cards[q].style.opacity='';} return; }
-  var vh=innerHeight||800;
-  for(var i=0;i<cards.length;i++){
-    var c=cards[i];
-    if(c.classList.contains('is-new')){ c.style.transform=''; c.style.opacity=''; continue; }
-    var r=c.getBoundingClientRect();
-    if(r.bottom<-40||r.top>vh+40){ c.style.opacity='0'; continue; }
-    var center=r.top+r.height/2, d=(center-vh/2)/(vh/2);
-    d=Math.max(-1.25,Math.min(1.25,d));
-    c.style.transform='rotateX('+(-d*8).toFixed(2)+'deg) translateY('+(d*16).toFixed(1)+'px)';
-    c.style.opacity=Math.max(0.18,1-Math.abs(d)*0.55).toFixed(3);
-  }
+  var cards=document.querySelectorAll('#e .gwish');
+  for(var i=0;i<cards.length;i++){ cards[i].style.transform='none'; cards[i].style.opacity='1'; }
 }
 var _tiltReq;
 function scheduleTilt(){ if(_tiltReq) return; _tiltReq=requestAnimationFrame(function(){_tiltReq=0;tiltCards();}); }
